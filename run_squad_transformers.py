@@ -849,7 +849,7 @@ def main(args):
     print(args)
 
     # tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-    tokenizer = BertTokenizer(args.model + "vocab.txt", lowercase=True)  # BertWordPieceTokenizer
+    tokenizer = BertTokenizer(args.model + "vocab.txt", lowercase=False)  # BertWordPieceTokenizer , lowercase=True
 
     if args.do_train or (not args.eval_test):
         with open(args.dev_file) as f:
