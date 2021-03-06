@@ -284,7 +284,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             if is_training and example.is_impossible:
                 start_position = 0
                 end_position = 0
-            if example_index < 20:
+            if example_index < 3:
                 print("*** Example ***")
                 print("unique_id: %s" % (unique_id))
                 print("example_index: %s" % (example_index))
