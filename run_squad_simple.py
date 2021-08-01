@@ -1,4 +1,3 @@
-%%writefile /kaggle/working/run_squad_simple.py
 import argparse
 import glob
 import logging
