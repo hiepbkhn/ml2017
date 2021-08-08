@@ -4,7 +4,7 @@ from torch.nn import CrossEntropyLoss
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 
-MAX_LEN = train_vectors[0].shape[0] # 937 -> 900
+MAX_LEN = 900
 
 class WordEmbedQA(nn.Module):
     def __init__(self):
