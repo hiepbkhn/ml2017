@@ -106,7 +106,7 @@ def compute_predictions_logits(
             if not best_non_null_entry:
                 if entry.text:
                     best_non_null_entry = entry
-        all_predictions[idx] = best_non_null_entry.text if not best_non_null_entry else ''
+        all_predictions[idx] = best_non_null_entry.text if best_non_null_entry is not None else ''
 
         probs = _compute_softmax(total_scores)
 
