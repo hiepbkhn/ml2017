@@ -1,5 +1,6 @@
 import math
 import json
+import collections
 
 def _compute_softmax(scores):
     """Compute softmax probability over raw logits."""
