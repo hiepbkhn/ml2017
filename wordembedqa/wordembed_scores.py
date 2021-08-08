@@ -104,8 +104,8 @@ def compute_predictions_logits(
         for entry in nbest:
             total_scores.append(entry.start_logit + entry.end_logit)
             if not best_non_null_entry:
-                if entry.text:
-                    best_non_null_entry = entry
+                # if entry.text:
+                best_non_null_entry = entry
         all_predictions[idx] = best_non_null_entry.text
 
         probs = _compute_softmax(total_scores)
