@@ -121,7 +121,7 @@ def compute_predictions_logits(
             output["end_index"] = entry.end_index
             nbest_json.append(output)
 
-        assert len(nbest_json) >= 1, "No valid predictions"
+        # assert len(nbest_json) >= 1, "No valid predictions"
 
         all_nbest_json[idx] = nbest_json
 
