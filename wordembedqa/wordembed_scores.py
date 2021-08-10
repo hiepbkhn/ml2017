@@ -103,8 +103,8 @@ def compute_predictions_logits(
         best_non_null_entry = None
         for entry in nbest:
             total_scores.append(entry.start_logit + entry.end_logit)
-            if not best_non_null_entry:
-                if entry.text:
+            if best_non_null_entry is None:
+                if entry.text != '':
                     best_non_null_entry = entry
         all_predictions[idx] = best_non_null_entry.text if best_non_null_entry is not None else ''
 
