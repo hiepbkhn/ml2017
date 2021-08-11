@@ -33,8 +33,8 @@ for fold in range(10):
     train_vectors = [vectors[i] for i in all_train_ids[fold]]    
     test_vectors = [vectors[i] for i in all_test_ids[fold]]
 
-    train_locs = [state_locs[i] for i in all_train_ids[fold]]    
-    test_locs = [state_locs[i] for i in all_test_ids[fold]]
+    train_locs = [locs[i] for i in all_train_ids[fold]]    
+    test_locs = [locs[i] for i in all_test_ids[fold]]
         
     train_starts = [x[0] for x in train_locs]
     train_ends = [x[1] for x in train_locs]
