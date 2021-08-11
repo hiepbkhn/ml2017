@@ -72,7 +72,7 @@ for fold in range(10):
     print(model)
     model = model.cuda()
 
-    learning_rate = 0.00001 # 0.001, 0.0001, 0.00001
+    learning_rate = 0.0001 # 0.001, 0.0001 (10 epochs), 0.00001
     # optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate, alpha=0.9)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     # optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
@@ -81,7 +81,7 @@ for fold in range(10):
     tr_loss = 0
     nb_tr_steps = 0
 
-    for epoch in range(100):
+    for epoch in range(10):
         for step, batch in enumerate(train_data_loader):
             batch = tuple(t.cuda() for t in batch)
 
