@@ -6,6 +6,7 @@ import numpy as np
 import collections
 from wordembed_models import WordEmbedQA, WordEmbedLSTMQA, WordEmbedBiLSTMQA, WordEmbedTransformerQA, WordEmbedUNetQA
 from wordembed_scores import compute_predictions_logits
+import sys
 
 np.random.seed(42) 
 
@@ -27,7 +28,17 @@ for i in range(n_cv):
     all_train_ids.append(ids[(i+1)*n//n_cv : i*n//n_cv + n])
 
 ####
-locs = state_locs
+if sys.argv[1] == 'hazard':
+    locs = hazard_locs
+if sys.argv[1] == 'state':
+    locs = state_locs
+if sys.argv[1] == 'effect':
+    locs = effect_locs        
+
+learning_rate = float(sys.argv[2])
+epochs = int(sys.argv[3])
+print('learning_rate =', learning_rate)
+print('epochs =', epochs)
 
 for fold in range(10):
     train_vectors = [vectors[i] for i in all_train_ids[fold]]    
@@ -75,7 +86,6 @@ for fold in range(10):
     print(model)
     model = model.cuda()
 
-    learning_rate = 0.01 # 0.001
     # optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate, alpha=0.9)
     # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
@@ -84,7 +94,7 @@ for fold in range(10):
     tr_loss = 0
     nb_tr_steps = 0
 
-    for epoch in range(5):  # MLP (100), BiLSTM (20, 10)
+    for epoch in range(epochs):  # MLP (100), BiLSTM (20, 10)
         for step, batch in enumerate(train_data_loader):
             batch = tuple(t.cuda() for t in batch)
 
