@@ -11,7 +11,7 @@ import sys
 np.random.seed(42) 
 
 ####
-w2v_texts, vectors, hazard_locs, state_locs, effect_locs = pickle.load(open('wordembed.pkl', 'rb'))
+w2v_texts, org_vectors, hazard_locs, state_locs, effect_locs = pickle.load(open('wordembed-bert.pkl', 'rb'))
 vectors = []
 MAX_LEN=900
 for vec in org_vectors:
@@ -63,8 +63,8 @@ for fold in range(10):
 
     train_texts = [w2v_texts[i] for i in all_train_ids[fold]]  
     test_texts = [w2v_texts[i] for i in all_test_ids[fold]]  
-    train_num_tokens = [len(text.tokens) for text in train_texts]
-    test_num_tokens = [len(text.tokens) for text in test_texts]
+    train_num_tokens = [len(text) for text in train_texts]
+    test_num_tokens = [len(text) for text in test_texts]
 
     
     batch_size = 8
@@ -157,8 +157,8 @@ for fold in range(10):
     
     #### POST-PROCESS
     test_tokens = []
-    for sample_text in test_texts:
-        test_tokens.append([token.text for token in sample_text.tokens])
+    for text in test_texts:
+        test_tokens.append([token if token[0] != '#' else token[2:] for token in text])
     ret = compute_predictions_logits(
         test_tokens,
         all_results,
