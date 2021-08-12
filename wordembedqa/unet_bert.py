@@ -52,8 +52,8 @@ for fold in range(10):
 
     train_texts = [w2v_texts[i] for i in all_train_ids[fold]]  
     test_texts = [w2v_texts[i] for i in all_test_ids[fold]]  
-    train_num_tokens = [len(text.tokens) for text in train_texts]
-    test_num_tokens = [len(text.tokens) for text in test_texts]
+    train_num_tokens = [len(text) for text in train_texts]
+    test_num_tokens = [len(text) for text in test_texts]
 
     
     batch_size = 8
