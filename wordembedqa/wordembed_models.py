@@ -114,8 +114,8 @@ class WordEmbedBiLSTMQA(nn.Module):
 
 #### Transformer    
 class WordEmbedTransformerQA(nn.Module):
-    def __init__(self):
-        super().__init__(input_dim=300, n_head=6) #
+    def __init__(self, input_dim=300, n_head=6):
+        super().__init__() #
         
         self.encoder = nn.TransformerEncoderLayer(d_model=input_dim, nhead=n_head)
         self.qa_outputs = nn.Linear(input_dim, 2)

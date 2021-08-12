@@ -11,8 +11,16 @@ import sys
 np.random.seed(42) 
 
 ####
-w2v_texts, vectors, hazard_locs, state_locs, effect_locs = pickle.load(open('wordembed-bert.pkl', 'rb'))
-vectors = [x[:900,:] for x in vectors]
+w2v_texts, org_vectors, hazard_locs, state_locs, effect_locs = pickle.load(open('wordembed-bert.pkl', 'rb'))
+vectors = []
+MAX_LEN=900
+for vec in org_vectors:
+    if vec.shape[0] > MAX_LEN:
+        vectors.append(vec[:MAX_LEN,:])
+    else:
+        pad = np.zeros((900, 768))
+        pad[:vec.shape[0],:] = vec
+        vectors.append(pad)
 
 ####
 n = len(w2v_texts)
@@ -55,8 +63,8 @@ for fold in range(10):
 
     train_texts = [w2v_texts[i] for i in all_train_ids[fold]]  
     test_texts = [w2v_texts[i] for i in all_test_ids[fold]]  
-    train_num_tokens = [len(text.tokens) for text in train_texts]
-    test_num_tokens = [len(text.tokens) for text in test_texts]
+    train_num_tokens = [len(text) for text in train_texts]
+    test_num_tokens = [len(text) for text in test_texts]
 
     
     batch_size = 8
