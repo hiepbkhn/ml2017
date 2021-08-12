@@ -48,8 +48,8 @@ epochs = int(sys.argv[3])
 print('learning_rate =', learning_rate)
 print('epochs =', epochs)
 
-for fold in range(1):
-    print('all_test_ids[fold] =', all_test_ids[fold])
+for fold in range(10):
+    # print('all_test_ids[fold] =', all_test_ids[fold])
     
     train_vectors = [vectors[i] for i in all_train_ids[fold]]    
     test_vectors = [vectors[i] for i in all_test_ids[fold]]
