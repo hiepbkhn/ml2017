@@ -155,7 +155,9 @@ for fold in range(10):
     print('eval loss =', total_loss/cid)
     
     #### POST-PROCESS
-    test_tokens = [text for text in test_texts]
+    test_tokens = []
+    for text in test_texts:
+        test_tokens.append([token if token[0] != '#' else token[2:] for token in text])
     ret = compute_predictions_logits(
         test_tokens,
         all_results,
