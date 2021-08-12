@@ -81,11 +81,11 @@ class WordEmbedLSTMQA(nn.Module):
 
 #### BiLSTM   
 class WordEmbedBiLSTMQA(nn.Module):
-    def __init__(self, hidden_dim):
+    def __init__(self, input_dim=300, hidden_dim=20):
         super().__init__() # WordEmbedLSTMQA, self
         
         self.hidden_dim = hidden_dim
-        self.lstm = nn.LSTM(300, self.hidden_dim, bidirectional=True, batch_first=True) # bidirectional=True, 
+        self.lstm = nn.LSTM(input_dim, self.hidden_dim, bidirectional=True, batch_first=True) # bidirectional=True, 
         self.qa_outputs = nn.Linear(2*self.hidden_dim, 2)
         self.dropout = nn.Dropout(0.1)
         
@@ -115,10 +115,10 @@ class WordEmbedBiLSTMQA(nn.Module):
 #### Transformer    
 class WordEmbedTransformerQA(nn.Module):
     def __init__(self):
-        super().__init__() #
+        super().__init__(input_dim=300, n_head=6) #
         
-        self.encoder = nn.TransformerEncoderLayer(d_model=300, nhead=6)
-        self.qa_outputs = nn.Linear(300, 2)
+        self.encoder = nn.TransformerEncoderLayer(d_model=input_dim, nhead=n_head)
+        self.qa_outputs = nn.Linear(input_dim, 2)
         
         nn.init.xavier_uniform_(self.qa_outputs.weight)
         
