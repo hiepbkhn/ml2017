@@ -10,7 +10,7 @@ from wordembed_scores import compute_predictions_logits
 np.random.seed(42) 
 
 ####
-w2v_texts, org_vectors, hazard_locs, state_locs, effect_locs = pickle.load(open('wordembed.pkl', 'rb'))
+w2v_texts, org_vectors, hazard_locs, state_locs, effect_locs = pickle.load(open('wordembed-bert.pkl', 'rb'))
 vectors = []
 MAX_LEN=900
 for vec in org_vectors:
