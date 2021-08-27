@@ -37,8 +37,10 @@ if sys.argv[1] == 'effect':
 
 learning_rate = float(sys.argv[2])
 epochs = int(sys.argv[3])
+max_answer_length = int(sys.argv[4])
 print('learning_rate =', learning_rate)
 print('epochs =', epochs)
+print('max_answer_length =', max_answer_length)
 
 for fold in range(10):
     train_vectors = [vectors[i] for i in all_train_ids[fold]]    
@@ -152,7 +154,7 @@ for fold in range(10):
         test_tokens,
         all_results,
         15,
-        100,
+        max_answer_length,
         'temp/prediction-' + str(fold) + '.json',
         'temp/nbest-' + str(fold) + '.json',
     )
