@@ -9,6 +9,7 @@ from wordembed_scores import compute_predictions_logits
 import sys
 
 np.random.seed(42) 
+torch.manual_seed(42)
 
 ####
 w2v_texts, vectors, hazard_locs, state_locs, effect_locs = pickle.load(open('wordembed.pkl', 'rb'))
@@ -146,18 +147,21 @@ for fold in range(10):
             cid += 1
             total_loss += loss_val
             #
-            all_results.append(Result(start_logits=start, end_logits=end, num_tokens=n_tokens))
+            all_results.append(Result(start_logits=start, end_logits=end, num_tokens=n_tokens.cpu().numpy()))
     print('eval loss =', total_loss/cid)
     
     #### POST-PROCESS
     test_tokens = []
     for sample_text in test_texts:
         test_tokens.append([token.text for token in sample_text.tokens])
-    ret = compute_predictions_logits(
-        test_tokens,
-        all_results,
-        15,
-        max_answer_length,
-        'temp/prediction-' + str(fold) + '.json',
-        'temp/nbest-' + str(fold) + '.json',
-    )
+
+    pickle.dump((test_tokens, all_results), open('temp/' + str(fold) + '.pkl', 'wb'))
+
+    # ret = compute_predictions_logits(
+    #     test_tokens,
+    #     all_results,
+    #     15,
+    #     max_answer_length,
+    #     'temp/prediction-' + str(fold) + '.json',
+    #     'temp/nbest-' + str(fold) + '.json',
+    # )
