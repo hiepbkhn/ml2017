@@ -244,3 +244,23 @@ class WordEmbedUNetQA(nn.Module):
         total_loss = (start_loss + end_loss) / 2
         
         return total_loss, start_logits, end_logits   
+
+class WordEmbedUNetMultiQA(nn.Module):
+    def __init__(self, enc_chs=(300,64,128), dec_chs=(128, 64), num_class=6):
+        super().__init__()
+        self.encoder     = Encoder(enc_chs)
+        self.decoder     = Decoder(dec_chs)
+        self.head        = nn.Conv1d(dec_chs[-1], num_class, 1) # kernel-size = 1
+
+    def forward(self, x, all_positions):
+        enc_ftrs = self.encoder(x)
+        out      = self.decoder(enc_ftrs[::-1][0], enc_ftrs[::-1][1:])
+        logits   = self.head(out)
+        logits = torch.transpose(logits, 1, 2)
+#         print('logits.size =', logits.size())
+        
+        loss_fct = CrossEntropyLoss()
+        total_loss = loss_fct(logits, all_positions)
+        
+        return total_loss, logits    
+
