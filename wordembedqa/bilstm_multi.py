@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 import numpy as np
 import collections
-from wordembed_models import WordEmbedQA, WordEmbedLSTMQA, WordEmbedBiLSTMQA, WordEmbedTransformerQA, WordEmbedUNetQA, MAX_LEN
+from wordembed_models import WordEmbedBiLSTMMultiQA, MAX_LEN
 from wordembed_scores import compute_predictions_logits
 import sys
 
@@ -52,26 +52,21 @@ for fold in range(10):
     test_num_tokens = [len(text.tokens) for text in test_texts]
 
     train_data = TensorDataset(torch.tensor(train_vectors, dtype=torch.float),
-                               torch.tensor(train_starts, dtype=torch.int64),
-                               torch.tensor(train_ends, dtype=torch.int64),
+                               torch.tensor(train_locs, dtype=torch.int64),
                                torch.tensor(train_num_tokens, dtype=torch.int64)
                               )
     train_sampler = RandomSampler(train_data)
     train_data_loader = DataLoader(train_data, sampler=train_sampler, batch_size=batch_size)
 
     eval_data = TensorDataset(torch.tensor(test_vectors, dtype=torch.float),
-                               torch.tensor(test_starts, dtype=torch.int64),
-                               torch.tensor(test_ends, dtype=torch.int64),
+                               torch.tensor(test_locs, dtype=torch.int64),
                                torch.tensor(test_num_tokens, dtype=torch.int64)
                               )
     eval_sampler = SequentialSampler(eval_data)
     validation_data_loader = DataLoader(eval_data, sampler=eval_sampler, batch_size=1)
     
     #### TRAIN
-    # model = WordEmbedQA()
-    # model = WordEmbedLSTMQA(100)
-    # model = WordEmbedLSTMQA(20)
-    model = WordEmbedBiLSTMQA(300, 20)
+    model = WordEmbedBiLSTMMultiQA(300, 20)
 
     print(model)
     model = model.cuda()
@@ -88,9 +83,9 @@ for fold in range(10):
         for step, batch in enumerate(train_data_loader):
             batch = tuple(t.cuda() for t in batch)
 
-            x, start_positions, end_positions, ignore_index = batch
+            x, all_positions, ignore_index = batch
             optimizer.zero_grad()
-            loss, _, _ = model(x, start_positions, end_positions) #, ignore_index)
+            loss, _ = model(x, all_positions) #, ignore_index)
 
             loss.backward()
             optimizer.step()
@@ -105,28 +100,23 @@ for fold in range(10):
 
     cid = 0
     count = 0
-    start_list = [] # hiepnh
-    end_list = [] 
+    all_list = [] # hiepnh
     total_loss = 0.0
 
     all_results = []
-    Result = collections.namedtuple("Result", ["start_logits", "end_logits", "num_tokens"])
+    Result = collections.namedtuple("Result", ["all_logits", "num_tokens"])
 
     for batch in validation_data_loader:
         batch = tuple(t.cuda() for t in batch)
-        x, start_positions, end_positions, num_tokens = batch
-        if isinstance(model, WordEmbedUNetQA):
-            x = torch.transpose(x, 1, 2)
+        x, all_positions, num_tokens = batch
         
         with torch.no_grad():
-            loss, start_logits, end_logits = model(x, start_positions, end_positions)
-            pred_start, pred_end = start_logits.detach().cpu().numpy(), end_logits.detach().cpu().numpy()
-            start_list.append(pred_start)
-            end_list.append(pred_end)
+            loss, all_logits = model(x, all_positions)
+            all_pred = all_logits.detach().cpu().numpy()
+            all_list.append(all_pred)
 
-        for idx, (start, end, n_tokens) in enumerate(zip(pred_start, pred_end, num_tokens)):
-            start_id = np.argmax(start)
-            end_id = np.argmax(end)
+        for idx, (pred, n_tokens) in enumerate(zip(all_pred, num_tokens)):
+            pred_id = np.argmax(pred)
             loss_val = loss.detach().cpu().numpy()
     #         print('-- cid =', cid, 'loss =', loss_val)
     #         print('true', test_starts[cid], test_ends[cid])
@@ -134,7 +124,7 @@ for fold in range(10):
             cid += 1
             total_loss += loss_val
             #
-            all_results.append(Result(start_logits=start, end_logits=end, num_tokens=n_tokens.cpu().numpy()))
+            all_results.append(Result(all_logits=pred, num_tokens=n_tokens.cpu().numpy()))
     print('eval loss =', total_loss/cid)
     
     #### POST-PROCESS
@@ -144,11 +134,3 @@ for fold in range(10):
 
     pickle.dump((test_tokens, all_results), open('temp/' + str(fold) + '.pkl', 'wb'))
 
-    # ret = compute_predictions_logits(
-    #     test_tokens,
-    #     all_results,
-    #     15,
-    #     max_answer_length,
-    #     'temp/prediction-' + str(fold) + '.json',
-    #     'temp/nbest-' + str(fold) + '.json',
-    # )
