@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.nn import CrossEntropyLoss
 import torch.nn.functional as F
-from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
+# from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 
 MAX_LEN = 900
 
@@ -111,6 +111,36 @@ class WordEmbedBiLSTMQA(nn.Module):
         total_loss = (start_loss + end_loss) / 2
         
         return total_loss, start_logits, end_logits    
+
+class WordEmbedBiLSTMMultiQA(nn.Module):
+    def __init__(self, input_dim=300, hidden_dim=20):
+        super().__init__() # WordEmbedLSTMQA, self
+        
+        self.hidden_dim = hidden_dim
+        self.lstm = nn.LSTM(input_dim, self.hidden_dim, bidirectional=True, batch_first=True) # bidirectional=True, 
+        self.qa_outputs = nn.Linear(2*self.hidden_dim, 6) # 6 for 3 question outputs
+        self.dropout = nn.Dropout(0.1)
+        
+        nn.init.xavier_uniform_(self.qa_outputs.weight)
+        
+    def forward(self, x, all_positions): #, ignored_index):
+        x, _ = self.lstm(x)
+        x = x.contiguous().view(-1, 2*self.hidden_dim)
+        x = F.relu(self.qa_outputs(x))
+        logits = x.view(all_positions.size(0), MAX_LEN, -1)
+        
+#         print('logits.size =', logits.size())
+        
+        loss_fct = CrossEntropyLoss()
+        ## avg
+        total_loss = loss_fct(logits, all_positions)
+
+        ## sum
+#         total_loss = 0.0
+#         for i in range(all_positions.size(1)):
+#             total_loss += loss_fct(logits[:,:,i], all_positions[:,i])
+        
+        return total_loss, logits   
 
 #### Transformer    
 class WordEmbedTransformerQA(nn.Module):
