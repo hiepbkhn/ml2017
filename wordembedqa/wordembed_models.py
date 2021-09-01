@@ -1,10 +1,10 @@
 import torch
 from torch import nn
-from torch.nn import CrossEntropyLoss
+from torch.nn import CrossEntropyLoss, BCEWithLogitsLoss
 import torch.nn.functional as F
 # from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 
-MAX_LEN = 900
+MAX_LEN = 513
 
 class WordEmbedQA(nn.Module):
     def __init__(self):
@@ -264,3 +264,27 @@ class WordEmbedUNetMultiQA(nn.Module):
         
         return total_loss, logits    
 
+class WordEmbedUNetMultiAnswer(nn.Module):
+    def __init__(self, enc_chs=(300,64,128), dec_chs=(128, 64), num_class=2):
+        super().__init__()
+        self.encoder     = Encoder(enc_chs)
+        self.decoder     = Decoder(dec_chs)
+        self.head        = nn.Conv1d(dec_chs[-1], num_class, 1) # kernel-size = 1
+
+    def forward(self, x, start_positions, end_positions):
+        enc_ftrs = self.encoder(x)
+        out      = self.decoder(enc_ftrs[::-1][0], enc_ftrs[::-1][1:])
+        logits   = self.head(out)
+        logits = torch.transpose(logits, 1, 2)
+#         print('logits.size =', logits.size())
+        
+        start_logits, end_logits = logits.split(1, dim=-1) 
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
+        
+        loss_fct = BCEWithLogitsLoss()
+        start_loss = loss_fct(start_logits, start_positions)
+        end_loss = loss_fct(end_logits, end_positions)
+        total_loss = (start_loss + end_loss) / 2
+        
+        return total_loss, start_logits, end_logits  
