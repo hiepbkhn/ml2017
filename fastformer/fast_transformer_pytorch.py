@@ -1,18 +1,10 @@
 import torch
 import torch.nn.functional as F
 from torch import nn, einsum
+from torch.nn import CrossEntropyLoss
 from einops import rearrange
 
-# helper functions
-
-def exists(val):
-    return val is not None
-
-def default(val, d):
-    return val if exists(val) else d
-
 # helper classes
-
 class PreNorm(nn.Module):
     def __init__(self, dim, fn):
         super().__init__()
@@ -24,7 +16,6 @@ class PreNorm(nn.Module):
         return self.fn(x, **kwargs)
 
 # blocks
-
 def FeedForward(dim, mult = 4):
     return nn.Sequential(
         nn.Linear(dim, dim * mult),
@@ -64,13 +55,11 @@ class FastAttention(nn.Module):
         mask = rearrange(mask, 'b n -> b () n')
 
         # calculate query attention logits
-
         q_attn_logits = rearrange(self.to_q_attn_logits(q), 'b h n () -> b h n') * self.scale
         q_attn_logits = q_attn_logits.masked_fill(~mask, mask_value)
         q_attn = q_attn_logits.softmax(dim = -1)
 
         # calculate global query token
-
         global_q = einsum('b h n, b h n d -> b h d', q_attn, q)
         global_q = rearrange(global_q, 'b h d -> b h () d')
 
@@ -79,31 +68,27 @@ class FastAttention(nn.Module):
         k = k * global_q
 
         # now calculate key attention logits
-
         k_attn_logits = rearrange(self.to_k_attn_logits(k), 'b h n () -> b h n') * self.scale
         k_attn_logits = k_attn_logits.masked_fill(~mask, mask_value)
         k_attn = k_attn_logits.softmax(dim = -1)
 
         # calculate global key token
-
         global_k = einsum('b h n, b h n d -> b h d', k_attn, k)
         global_k = rearrange(global_k, 'b h d -> b h () d')
 
         # bias the values
-
         v = v * global_k
         r = self.to_r(v)
 
         r = r + q # paper says to add the queries as a residual
 
         # aggregate
-
         r = rearrange(r, 'b h n d -> b n (h d)')
         return self.to_out(r)
 
 # main class
 
-class FastTransformer(nn.Module):
+class FastTransformerBERT(nn.Module):
     def __init__(
         self,
         *,
@@ -116,6 +101,8 @@ class FastTransformer(nn.Module):
         ff_mult = 4
     ):
         super().__init__()
+        self.num_tokens = num_tokens # hiepnh
+        
         self.token_emb = nn.Embedding(num_tokens, dim)
         self.pos_emb = nn.Embedding(max_seq_len, dim)
 
@@ -131,31 +118,32 @@ class FastTransformer(nn.Module):
             ]))
 
         # weight tie projections across all layers
-
         first_block, _ = self.layers[0]
         for block, _ in self.layers[1:]:
             block.fn.to_q_attn_logits = first_block.fn.to_q_attn_logits
             block.fn.to_k_attn_logits = first_block.fn.to_k_attn_logits
 
         # to logits
-
         self.to_logits = nn.Sequential(
             nn.LayerNorm(dim),
             nn.Linear(dim, num_tokens)
         )
 
-    def forward(
-        self,
-        x,
-        mask = None
-    ):
-        n, device = x.shape[1], x.device
-        x = self.token_emb(x)
+    def forward(self, input_ids=None, attention_mask=None, token_type_ids=None, labels=None):
+        n, device = input_ids.shape[1], input_ids.device
+        x = self.token_emb(input_ids)
         pos_emb = self.pos_emb(torch.arange(n, device = device))
         x = x + rearrange(pos_emb, 'n d -> () n d')
 
+        bool_mask = attention_mask > 0 # attention_mask.bool()
         for attn, ff in self.layers:
-            x = attn(x, mask = mask) + x
+            x = attn(x, mask = bool_mask) + x
             x = ff(x) + x
 
-        return self.to_logits(x)
+        # hiepnh
+        prediction_scores = self.to_logits(x)
+        loss_fct = CrossEntropyLoss()  # -100 index = padding token
+        masked_lm_loss = loss_fct(prediction_scores.view(-1, self.num_tokens), labels.view(-1))
+        
+#         return self.to_logits(x)
+        return masked_lm_loss, x
