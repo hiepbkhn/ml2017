@@ -73,7 +73,6 @@ class FastSelfAttention(nn.Module):
         batch_size, seq_len, _ = hidden_states.shape
         mixed_query_layer = self.query(hidden_states)
         mixed_key_layer = self.key(hidden_states)
-
         # batch_size, num_head, seq_len
         query_for_score = self.query_att(mixed_query_layer).transpose(1, 2) / self.attention_head_size**0.5
         # add attention mask
@@ -91,12 +90,12 @@ class FastSelfAttention(nn.Module):
         # batch_size, num_head, seq_len, head_dim
 
         # batch_size, num_head, seq_len
-        mixed_query_key_layer = mixed_key_layer * pooled_query_repeat
+        mixed_query_key_layer=mixed_key_layer* pooled_query_repeat
         
-        query_key_score = (self.key_att(mixed_query_key_layer)/ self.attention_head_size**0.5).transpose(1, 2)
+        query_key_score=(self.key_att(mixed_query_key_layer)/ self.attention_head_size**0.5).transpose(1, 2)
         
         # add attention mask
-        query_key_score += attention_mask
+        query_key_score +=attention_mask
 
         # batch_size, num_head, 1, seq_len
         query_key_weight = self.softmax(query_key_score).unsqueeze(2)
@@ -105,7 +104,7 @@ class FastSelfAttention(nn.Module):
         pooled_key = torch.matmul(query_key_weight, key_layer)
 
         #query = value
-        weighted_value = (pooled_key * query_layer).transpose(1, 2)
+        weighted_value =(pooled_key * query_layer).transpose(1, 2)
         weighted_value = weighted_value.reshape(
             weighted_value.size()[:-2] + (self.num_attention_heads * self.attention_head_size,))
         weighted_value = self.transform(weighted_value) + mixed_query_layer
@@ -192,8 +191,39 @@ class FastformerEncoder(nn.Module):
         for i, layer_module in enumerate(self.encoders):
             layer_outputs = layer_module(all_hidden_states[-1], extended_attention_mask)
             all_hidden_states.append(layer_outputs)
-        assert len(self.poolers) > pooler_index
-        output = self.poolers[pooler_index](all_hidden_states[-1], attention_mask)
+        
+        ## hiepnh - commented           
+        # assert len(self.poolers) > pooler_index
+        # output = self.poolers[pooler_index](all_hidden_states[-1], attention_mask)
 
-        return output 
+        # return output 
+        return all_hidden_states[-1]
 
+class FastformerBERT(torch.nn.Module):
+    def __init__(self, config, vocab_size, embed_dim):
+        super(FastformerBERT, self).__init__()
+        self.config = config
+        self.word_embedding = nn.Embedding(vocab_size , embed_dim, padding_idx=0) # len(word_dict)
+        self.fastformer_model = FastformerEncoder(config)
+        self.criterion = nn.CrossEntropyLoss() 
+        self.apply(self.init_weights)
+        
+    def init_weights(self, module):
+        if isinstance(module, (nn.Linear, nn.Embedding)):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if isinstance(module, (nn.Embedding)) and module.padding_idx is not None:
+                with torch.no_grad():
+                    module.weight[module.padding_idx].fill_(0)
+        if isinstance(module, nn.Linear) and module.bias is not None:
+            module.bias.data.zero_()
+    
+    def forward(self, input_ids=None, attention_mask=None, token_type_ids=None, labels=None):
+        # mask = input_ids.bool().float()
+        embds = self.word_embedding(input_ids)
+        text_vec = self.fastformer_model(embds, attention_mask)
+
+        # hiepnh
+        # print(text_vec.size(), labels.size())
+        masked_lm_loss = self.criterion(text_vec.view(-1, self.config.hidden_size), labels.view(-1))
+
+        return masked_lm_loss, text_vec
