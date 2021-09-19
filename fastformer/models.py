@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from transformers import BertConfig
-from transformers.modeling_bert import BertSelfOutput, BertIntermediate, BertOutput
+from transformers.models.bert.modeling_bert import BertSelfOutput, BertIntermediate, BertOutput
 import logging
 
 class AttentionPooling(nn.Module):
