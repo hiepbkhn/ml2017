@@ -47,20 +47,20 @@ from transformers.modeling_outputs import QuestionAnsweringModelOutput
 
 class ReinitWeightQA(BertPreTrainedModel):
 
-    authorized_unexpected_keys = [r"pooler"]
+#     authorized_unexpected_keys = [r"pooler"]
 
     def __init__(self, config, reinit_n_layers=3):
         super().__init__(config)
+    
         self.num_labels = config.num_labels
 
         self.bert = BertModel(config, add_pooling_layer=False)
         self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         self.init_weights()
-        #
+        
         self.reinit_n_layers = reinit_n_layers
         print('reinit_n_layers =', reinit_n_layers)
-        if reinit_n_layers > 0: self._do_reinit() 
 
     def _debug_reinit(self, text):
         print(f"\n{text}\nPooler:\n", self.model.pooler.dense.weight.data)        
@@ -73,25 +73,25 @@ class ReinitWeightQA(BertPreTrainedModel):
         
     def _do_reinit(self):
         # Re-init pooler.
-        self.model.pooler.dense.weight.data.normal_(mean=0.0, std=self.model.config.initializer_range)
-        self.model.pooler.dense.bias.data.zero_()
-        for param in self.model.pooler.parameters():
-            param.requires_grad = True
+#         self.model.pooler.dense.weight.data.normal_(mean=0.0, std=self.model.config.initializer_range)
+#         self.model.pooler.dense.bias.data.zero_()
+#         for param in self.model.pooler.parameters():
+#             param.requires_grad = True
         
         # Re-init last n layers.
         for n in range(self.reinit_n_layers):
-            self.model.encoder.layer[-(n+1)].apply(self._init_weight_and_bias)
+            self.bert.encoder.layer[-(n+1)].apply(self._init_weight_and_bias)
             
     def _init_weight_and_bias(self, module):                        
         if isinstance(module, nn.Linear):
-            module.weight.data.normal_(mean=0.0, std=self.model.config.initializer_range)
+            module.weight.data.normal_(mean=0.0, std=self.bert.config.initializer_range)
             if module.bias is not None:
                 module.bias.data.zero_()
         elif isinstance(module, nn.LayerNorm):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
         elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=self.model.config.initializer_range)
+            module.weight.data.normal_(mean=0.0, std=self.bert.config.initializer_range)
             if module.padding_idx is not None:
                 module.weight.data[module.padding_idx].zero_()
                 
@@ -263,18 +263,12 @@ def train(args, train_dataset, model, tokenizer):
             model.train()
             batch = tuple(t.to(args.device) for t in batch)
 
-            neg_tensor = -100.0 * torch.ones(batch[0].size())
-            neg_tensor = neg_tensor.to(args.device)
-
             inputs = {
                 "input_ids": batch[0],
                 "attention_mask": batch[1],
                 "token_type_ids": batch[2],
                 "start_positions": batch[3],
-                "end_positions": batch[4],
-                "start_mask": batch[8],
-                "end_mask": batch[9],
-                "neg_tensor": neg_tensor
+                "end_positions": batch[4]
             }
 
             outputs = model(**inputs)
@@ -362,17 +356,11 @@ def evaluate(args, model, tokenizer, prefix=""):
         model.eval()
         batch = tuple(t.to(args.device) for t in batch)
 
-        neg_tensor = -100.0 * torch.ones(batch[0].size())
-        neg_tensor = neg_tensor.to(args.device)
-        
         with torch.no_grad():
             inputs = {
                 "input_ids": batch[0],
                 "attention_mask": batch[1],
-                "token_type_ids": batch[2],
-                "start_mask": batch[6],
-                "end_mask": batch[7],
-                "neg_tensor": neg_tensor
+                "token_type_ids": batch[2]
             }
 
             feature_indices = batch[3]
@@ -635,12 +623,23 @@ def main():
         cache_dir=args.cache_dir if args.cache_dir else None,
     )
 
+#     print('--BEFORE REINIT--')
+#     print(model.bert.encoder.layer[11].attention.output.dense.weight.data)
+#     print(model.bert.encoder.layer[5].attention.output.dense.weight.data)
+
+    if model.reinit_n_layers > 0:  ## RE-INIT
+        model._do_reinit() 
+
     if args.local_rank == 0:
         # Make sure only the first process in distributed training will download model & vocab
         torch.distributed.barrier()
 
-    model.to(args.device)
+#     print('--AFTER REINIT--')
+#     print(model.bert.encoder.layer[11].attention.output.dense.weight.data)
+#     print(model.bert.encoder.layer[5].attention.output.dense.weight.data)
 
+    model.to(args.device)
+    
     print("Training/evaluation parameters %s"%args)
 
     # Training
@@ -649,6 +648,10 @@ def main():
         global_step, tr_loss = train(args, train_dataset, model, tokenizer)
         print(" global_step = %s, average loss = %s"%(global_step, tr_loss))
 
+#     print('--AFTER TRAIN--')
+#     print(model.bert.encoder.layer[11].attention.output.dense.weight.data)    
+#     print(model.bert.encoder.layer[5].attention.output.dense.weight.data)    
+        
     # Save the trained model and the tokenizer
     if args.do_train and (args.local_rank == -1 or torch.distributed.get_rank() == 0):
         print("Saving model checkpoint to %s"%args.output_dir)
@@ -663,39 +666,48 @@ def main():
         torch.save(args, os.path.join(args.output_dir, "training_args.bin"))
 
         # Load a trained model and vocabulary that you have fine-tuned
-        model = AnchorQA.from_pretrained(args.output_dir)  # , force_download=True)
-        tokenizer = AutoTokenizer.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
-        model.to(args.device)
+#         model = ReinitWeightQA.from_pretrained(args.output_dir, reinit_n_layers=0)  # , force_download=True)
+#         tokenizer = AutoTokenizer.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
+#         model.to(args.device)
 
     # Evaluation - we can ask to evaluate all the checkpoints (sub-directories) in a directory
+#     results = {}
+#     if args.do_eval and args.local_rank in [-1, 0]:
+#         if args.do_train:
+#             print("Loading checkpoints saved during training for evaluation")
+#             checkpoints = [args.output_dir]
+#             if args.eval_all_checkpoints:
+#                 checkpoints = list(
+#                     os.path.dirname(c)
+#                     for c in sorted(glob.glob(args.output_dir + "/**/" + WEIGHTS_NAME, recursive=True))
+#                 )
+
+#         else:
+#             print("Loading checkpoint %s for evaluation"%args.model_name_or_path)
+#             checkpoints = [args.model_name_or_path]
+
+#         print("Evaluate the following checkpoints: %s"%checkpoints)
+
+#         for checkpoint in checkpoints:
+#             # Reload the model
+#             global_step = checkpoint.split("-")[-1] if len(checkpoints) > 1 else ""
+#             model = ReinitWeightQA.from_pretrained(checkpoint, reinit_n_layers=0)  # , force_download=True)
+#             model.to(args.device)
+
+#             # Evaluate
+#             result = evaluate(args, model, tokenizer, prefix=global_step)
+
+#             result = dict((k + ("_{}".format(global_step) if global_step else ""), v) for k, v in result.items())
+#             results.update(result)
+
+#     print("Results: {}".format(results))
+
+    ##
     results = {}
-    if args.do_eval and args.local_rank in [-1, 0]:
-        if args.do_train:
-            print("Loading checkpoints saved during training for evaluation")
-            checkpoints = [args.output_dir]
-            if args.eval_all_checkpoints:
-                checkpoints = list(
-                    os.path.dirname(c)
-                    for c in sorted(glob.glob(args.output_dir + "/**/" + WEIGHTS_NAME, recursive=True))
-                )
+    result = evaluate(args, model, tokenizer, prefix=global_step)
 
-        else:
-            print("Loading checkpoint %s for evaluation"%args.model_name_or_path)
-            checkpoints = [args.model_name_or_path]
-
-        print("Evaluate the following checkpoints: %s"%checkpoints)
-
-        for checkpoint in checkpoints:
-            # Reload the model
-            global_step = checkpoint.split("-")[-1] if len(checkpoints) > 1 else ""
-            model = AnchorQA.from_pretrained(checkpoint)  # , force_download=True)
-            model.to(args.device)
-
-            # Evaluate
-            result = evaluate(args, model, tokenizer, prefix=global_step)
-
-            result = dict((k + ("_{}".format(global_step) if global_step else ""), v) for k, v in result.items())
-            results.update(result)
+    result = dict((k + ("_{}".format(global_step) if global_step else ""), v) for k, v in result.items())
+    results.update(result)
 
     print("Results: {}".format(results))
 
