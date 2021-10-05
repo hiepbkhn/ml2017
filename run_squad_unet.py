@@ -633,7 +633,7 @@ def main():
         do_lower_case=args.do_lower_case,
         cache_dir=args.cache_dir if args.cache_dir else None,
     )
-    model = AnchorQA.from_pretrained(
+    model = BertUNetQA.from_pretrained(
         args.model_name_or_path,
         from_tf=bool(".ckpt" in args.model_name_or_path),
         config=config,
@@ -668,7 +668,7 @@ def main():
         torch.save(args, os.path.join(args.output_dir, "training_args.bin"))
 
         # Load a trained model and vocabulary that you have fine-tuned
-        model = AnchorQA.from_pretrained(args.output_dir)  # , force_download=True)
+        model = BertUNetQA.from_pretrained(args.output_dir)  # , force_download=True)
         tokenizer = AutoTokenizer.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
         model.to(args.device)
 
@@ -693,7 +693,7 @@ def main():
         for checkpoint in checkpoints:
             # Reload the model
             global_step = checkpoint.split("-")[-1] if len(checkpoints) > 1 else ""
-            model = AnchorQA.from_pretrained(checkpoint)  # , force_download=True)
+            model = BertUNetQA.from_pretrained(checkpoint)  # , force_download=True)
             model.to(args.device)
 
             # Evaluate
