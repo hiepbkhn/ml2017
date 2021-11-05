@@ -18,7 +18,7 @@ from transformers import (
     WEIGHTS_NAME,
     AdamW,
     AutoConfig,
-    BertForQuestionAnswering,
+    RobertaForQuestionAnswering,
     T5Tokenizer,
     get_linear_schedule_with_warmup,
     squad_convert_examples_to_features,
@@ -491,7 +491,7 @@ def main():
         do_lower_case=args.do_lower_case,
         cache_dir=args.cache_dir if args.cache_dir else None,
     )
-    model = BertForQuestionAnswering.from_pretrained(
+    model = RobertaForQuestionAnswering.from_pretrained(
         args.model_name_or_path,
         from_tf=bool(".ckpt" in args.model_name_or_path),
         config=config,
@@ -526,7 +526,7 @@ def main():
         torch.save(args, os.path.join(args.output_dir, "training_args.bin"))
 
         # Load a trained model and vocabulary that you have fine-tuned
-        model = BertForQuestionAnswering.from_pretrained(args.output_dir)  # , force_download=True)
+        model = RobertaForQuestionAnswering.from_pretrained(args.output_dir)  # , force_download=True)
         tokenizer = T5Tokenizer.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
         model.to(args.device)
 
@@ -551,7 +551,7 @@ def main():
         for checkpoint in checkpoints:
             # Reload the model
             global_step = checkpoint.split("-")[-1] if len(checkpoints) > 1 else ""
-            model = BertForQuestionAnswering.from_pretrained(checkpoint)  # , force_download=True)
+            model = RobertaForQuestionAnswering.from_pretrained(checkpoint)  # , force_download=True)
             model.to(args.device)
 
             # Evaluate
