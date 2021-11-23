@@ -31,7 +31,7 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)
 
 ##
-PRETRAINED_MODEL_NAME = "sonoisa/t5-base-japanese"
+PRETRAINED_MODEL_NAME = "uer/t5-base-chinese-cluecorpussmall"
 MODEL_DIR = "/kaggle/working/model"
 
 ####
@@ -340,14 +340,14 @@ for batch in tqdm(test_loader):
     dec = [tokenizer.decode(ids, skip_special_tokens=True, 
                             clean_up_tokenization_spaces=False) 
                 for ids in outs.sequences]
-    conf = [s.cpu().item() for s in torch.exp(outs.sequences_scores)]
-    target = [tokenizer.decode(ids, skip_special_tokens=True, 
-                               clean_up_tokenization_spaces=False) 
-                for ids in batch["target_ids"]]
+    # conf = [s.cpu().item() for s in torch.exp(outs.sequences_scores)]
+    # target = [tokenizer.decode(ids, skip_special_tokens=True, 
+                               # clean_up_tokenization_spaces=False) 
+                # for ids in batch["target_ids"]]
 
     outputs.extend(dec)
-    confidences.extend(conf)
-    targets.extend(target)
+    # confidences.extend(conf)
+    # targets.extend(target)
     
 with open('/kaggle/working/results.txt', 'w', encoding='utf-8') as f:
     for pred in outputs:
