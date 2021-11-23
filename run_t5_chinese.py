@@ -18,7 +18,7 @@ import pytorch_lightning as pl
 from transformers import (
     AdamW,
     T5ForConditionalGeneration,
-    T5Tokenizer,
+    BertTokenizer,
     get_linear_schedule_with_warmup
 )
 
@@ -156,7 +156,7 @@ class T5FineTuner(pl.LightningModule):
         self.model = T5ForConditionalGeneration.from_pretrained(hparams.model_name_or_path)
 
         # トークナイザーの読み込み
-        self.tokenizer = T5Tokenizer.from_pretrained(hparams.tokenizer_name_or_path, is_fast=True)
+        self.tokenizer = BertTokenizer.from_pretrained(hparams.tokenizer_name_or_path, is_fast=True)
 
     def forward(self, input_ids, attention_mask=None, decoder_input_ids=None, 
                 decoder_attention_mask=None, labels=None):
