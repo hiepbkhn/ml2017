@@ -22,7 +22,6 @@ from transformers import (
     get_linear_schedule_with_warmup
 )
 
-# 乱数シードの設定
 def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
@@ -38,7 +37,7 @@ MODEL_DIR = "/kaggle/working/model"
 USE_GPU = torch.cuda.is_available()
 
 args_dict = dict(
-    data_dir="/kaggle/working/data",  # データセットのディレクトリ
+    data_dir="/kaggle/working/data",  
     # model_name_or_path=PRETRAINED_MODEL_NAME,
     # tokenizer_name_or_path=PRETRAINED_MODEL_NAME,
 
@@ -79,8 +78,8 @@ args_dict.update({
     "tokenizer_name_or_path": model_args.model_name_or_path ,
     "learning_rate":     model_args.learning_rate ,
     "seed":                 model_args.seed ,
-    "max_input_length":  model_args.max_input_length,  # 入力文の最大トークン数
-    "max_target_length": model_args.max_target_length,  # 出力文の最大トークン数
+    "max_input_length":  model_args.max_input_length,  
+    "max_target_length": model_args.max_target_length, 
     "train_batch_size":  model_args.train_batch_size,
     "eval_batch_size":   model_args.eval_batch_size,
     "num_train_epochs":  model_args.num_train_epochs, # 3,5
@@ -152,15 +151,12 @@ class T5FineTuner(pl.LightningModule):
         super().__init__()
         self.hparams = hparams
 
-        # 事前学習済みモデルの読み込み
         self.model = T5ForConditionalGeneration.from_pretrained(hparams.model_name_or_path)
 
-        # トークナイザーの読み込み
         self.tokenizer = BertTokenizer.from_pretrained(hparams.tokenizer_name_or_path, is_fast=True)
 
     def forward(self, input_ids, attention_mask=None, decoder_input_ids=None, 
                 decoder_attention_mask=None, labels=None):
-        """順伝搬"""
         return self.model(
             input_ids,
             attention_mask=attention_mask,
@@ -170,7 +166,6 @@ class T5FineTuner(pl.LightningModule):
         )
 
     def _step(self, batch):
-        """ロス計算"""
         labels = batch["target_ids"]
 
         # All labels set to -100 are ignored (masked), 
@@ -188,30 +183,25 @@ class T5FineTuner(pl.LightningModule):
         return loss
 
     def training_step(self, batch, batch_idx):
-        """訓練ステップ処理"""
         loss = self._step(batch)
         self.log("train_loss", loss)
         return {"loss": loss}
 
     def validation_step(self, batch, batch_idx):
-        """バリデーションステップ処理"""
         loss = self._step(batch)
         self.log("val_loss", loss)
         return {"val_loss": loss}
 
     # def validation_epoch_end(self, outputs):
-    #     """バリデーション完了処理"""
     #     avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
     #     self.log("val_loss", avg_loss, prog_bar=True)
 
     def test_step(self, batch, batch_idx):
-        """テストステップ処理"""
         loss = self._step(batch)
         self.log("test_loss", loss)
         return {"test_loss": loss}
 
     # def test_epoch_end(self, outputs):
-    #     """テスト完了処理"""
     #     avg_loss = torch.stack([x["test_loss"] for x in outputs]).mean()
     #     self.log("test_loss", avg_loss, prog_bar=True)
 
@@ -242,7 +232,6 @@ class T5FineTuner(pl.LightningModule):
         return [optimizer], [{"scheduler": scheduler, "interval": "step", "frequency": 1}]
 
     def get_dataset(self, tokenizer, type_path, args):
-        """データセットを作成する"""
         return TsvDataset(
             tokenizer=tokenizer, 
             data_dir=args.data_dir, 
@@ -251,7 +240,6 @@ class T5FineTuner(pl.LightningModule):
             target_max_len=args.max_target_length)
     
     def setup(self, stage=None):
-        """初期設定（データセットの読み込み）"""
         if stage == 'fit' or stage is None:
             train_dataset = self.get_dataset(tokenizer=self.tokenizer, 
                                              type_path="train.tsv", args=self.hparams)
@@ -268,13 +256,11 @@ class T5FineTuner(pl.LightningModule):
             )
 
     def train_dataloader(self):
-        """訓練データローダーを作成する"""
         return DataLoader(self.train_dataset, 
                           batch_size=self.hparams.train_batch_size, 
                           drop_last=True, shuffle=True, num_workers=4)
 
     def val_dataloader(self):
-        """バリデーションデータローダーを作成する"""
         return DataLoader(self.val_dataset, 
                           batch_size=self.hparams.eval_batch_size, 
                           num_workers=4)
@@ -336,18 +322,19 @@ for batch in tqdm(test_loader):
         max_length=args.max_target_length, # args.max_target_length
         return_dict_in_generate=True,
         output_scores=True)
+#     print('outs =', outs)
 
     dec = [tokenizer.decode(ids, skip_special_tokens=True, 
                             clean_up_tokenization_spaces=False) 
                 for ids in outs.sequences]
-    # conf = [s.cpu().item() for s in torch.exp(outs.sequences_scores)]
-    # target = [tokenizer.decode(ids, skip_special_tokens=True, 
-                               # clean_up_tokenization_spaces=False) 
-                # for ids in batch["target_ids"]]
+#     conf = [s.cpu().item() for s in torch.exp(outs.scores)]
+#     target = [tokenizer.decode(ids, skip_special_tokens=True, 
+#                                clean_up_tokenization_spaces=False) 
+#                 for ids in batch["target_ids"]]
 
     outputs.extend(dec)
-    # confidences.extend(conf)
-    # targets.extend(target)
+#     confidences.extend(conf)
+#     targets.extend(target)
     
 with open('/kaggle/working/results.txt', 'w', encoding='utf-8') as f:
     for pred in outputs:
