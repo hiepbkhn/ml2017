@@ -240,14 +240,20 @@ def evaluate(args, model, tokenizer, prefix=""):
 
             feature_indices = batch[3]
             outputs = model(**inputs)
-
+#         print('outputs =', outputs)
+#         print('feature_indices =', feature_indices)
+#         print(outputs['start_logits'].size())
+#         print(outputs['end_logits'].size())
         for i, feature_index in enumerate(feature_indices):
             eval_feature = features[feature_index.item()]
             unique_id = int(eval_feature.unique_id)
 
-            output = [to_list(output[i]) for output in outputs]
+#             output = [to_list(output[i]) for output in outputs]
+#             start_logits, end_logits = output
+            
+            start_logits = outputs['start_logits'][i].detach().cpu().tolist()
+            end_logits = outputs['end_logits'][i].detach().cpu().tolist()
 
-            start_logits, end_logits = output
             result = SquadResult(unique_id, start_logits, end_logits)
 
             all_results.append(result)
