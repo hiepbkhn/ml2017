@@ -36,7 +36,8 @@ def read_data(file, target, tokenizer, max_len = 384, doc_stride = 128):
     all_input_ids, all_masks, all_starts, all_ends  = [], [], [], []
     sample_loc = [0]
     for i in tqdm(range(len(text_tok))):
-        input_ids, masks, starts, ends = get_input(text_tok[i], target_tok[i], target_loc[i])
+        input_ids, masks, starts, ends = get_input(text_tok[i], target_tok[i], target_loc[i], 
+                                                   max_len = max_len, doc_stride = doc_stride)
         all_input_ids.extend(input_ids)
         all_masks.extend(masks)
         all_starts.extend(starts)
