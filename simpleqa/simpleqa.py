@@ -15,7 +15,7 @@ import torch
 import torch.utils.checkpoint
 from torch import nn
 from torch.nn import CrossEntropyLoss, MSELoss
-from transformers import AutoTokenizer, get_linear_schedule_with_warmup
+from transformers import AutoTokenizer, T5Tokenizer, get_linear_schedule_with_warmup
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 from torch.optim import AdamW
 
@@ -238,7 +238,10 @@ print(args)
 
 set_seed(args)
 
-tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
+if 'rinna' in args.model_name_or_path:
+    tokenizer = T5Tokenizer.from_pretrained(args.model_name_or_path)
+else:
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
 
 eval_input_ids, eval_masks, eval_starts, eval_ends, eval_loc = \
     read_data(args.eval_file, args.target, tokenizer, max_len=args.max_len, doc_stride=args.doc_stride)
