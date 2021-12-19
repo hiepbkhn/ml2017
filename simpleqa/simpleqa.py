@@ -10,6 +10,7 @@ import collections
 from colorama import Fore
 import numpy as np
 from tqdm import tqdm, trange
+import pickle
 
 import torch
 import torch.utils.checkpoint
@@ -202,6 +203,7 @@ def evaluate(args, eval_input_ids, dataset, model, tokenizer, prefix=""):
         output_nbest_file
     )
     json.dump(eval_loc, open(os.path.join(args.output_dir, "eval_loc.json"), "w"))
+    pickle.dump(all_results, open(os.path.join(args.output_dir, "all_results_" + prefix + ".pkl"), "wb"))
 
 ## MAIN
 parser = argparse.ArgumentParser()
