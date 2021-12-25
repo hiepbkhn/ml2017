@@ -21,7 +21,7 @@ from torch.utils.data import TensorDataset, DataLoader, RandomSampler, Sequentia
 from torch.optim import AdamW
 
 from model import SimpleBertQA
-from data import read_data
+from data import read_data, read_data_eval
 from score import compute_predictions_logits, compute_scores
 
 
@@ -246,7 +246,7 @@ else:
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
 
 eval_input_ids, eval_masks, eval_starts, eval_ends, eval_loc = \
-    read_data(args.eval_file, args.target, tokenizer, max_len=args.max_len, doc_stride=args.doc_stride)
+    read_data_eval(args.eval_file, args.target, tokenizer, max_len=args.max_len, doc_stride=args.doc_stride)
 eval_data = TensorDataset(torch.tensor(eval_input_ids, dtype=torch.int64),
                     torch.tensor(eval_masks, dtype=torch.int64),
                     torch.tensor(eval_starts, dtype=torch.int64),
