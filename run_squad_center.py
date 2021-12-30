@@ -102,7 +102,8 @@ class CenterQA(BertPreTrainedModel):
             start_positions.clamp_(0, ignored_index)
             end_positions.clamp_(0, ignored_index)
             # center_positions.clamp_(0, ignored_index)
-            mean_positions = torch.mean(torch.stack([start_positions, end_positions], 1).float(), 0)
+            mean_positions = torch.mean(torch.stack([start_positions, end_positions], 0).float(), 0)
+            # print('size =', start_positions.size(), mean_positions.size())
             center_positions = mean_positions.long() # round
 
             loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
