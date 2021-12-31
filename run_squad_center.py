@@ -22,12 +22,16 @@ from transformers import (
     get_linear_schedule_with_warmup,
     squad_convert_examples_to_features,
 )
-from transformers.data.metrics.squad_metrics import (
-    compute_predictions_log_probs,
-    compute_predictions_logits,
+# from transformers.data.metrics.squad_metrics import (
+    # compute_predictions_log_probs,
+    # compute_predictions_logits,
+    # squad_evaluate,
+# )
+from squad_metrics_with_index import (
+    compute_predictions_logits_center,
     squad_evaluate,
 )
-from transformers.data.processors.squad import SquadResult, SquadV1Processor, SquadV2Processor
+from transformers.data.processors.squad import SquadV1Processor, SquadV2Processor # SquadResult
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -44,6 +48,14 @@ from torch import nn
 from torch.nn import CrossEntropyLoss
 from transformers import BertPreTrainedModel, BertModel
 from transformers.modeling_outputs import QuestionAnsweringModelOutput
+
+###
+class SquadResultCenter:
+    def __init__(self, unique_id, start_logits, end_logits, center_logits):
+        self.start_logits = start_logits
+        self.end_logits = end_logits
+        self.center_logits = center_logits
+        self.unique_id = unique_id
 
 class CenterQA(BertPreTrainedModel):
 
@@ -113,7 +125,7 @@ class CenterQA(BertPreTrainedModel):
             total_loss = (start_loss + end_loss + center_loss) / 3
 
         if not return_dict:
-            output = (start_logits, end_logits) + outputs[2:] # return center_logits or not !
+            output = (start_logits, end_logits, end_logits) + outputs[2:] # return center_logits or not !
             return ((total_loss,) + output) if total_loss is not None else output
 
         return QuestionAnsweringModelOutput(
@@ -327,8 +339,8 @@ def evaluate(args, model, tokenizer, prefix=""):
 
             output = [to_list(output[i]) for output in outputs]
 
-            start_logits, end_logits = output
-            result = SquadResult(unique_id, start_logits, end_logits)
+            start_logits, end_logits, center_logits = output
+            result = SquadResultCenter(unique_id, start_logits, end_logits, center_logits)
 
             all_results.append(result)
         eval_pbar.update(batch[0].size(0)) # hiepnh
@@ -346,7 +358,7 @@ def evaluate(args, model, tokenizer, prefix=""):
     else:
         output_null_log_odds_file = None
 
-    predictions = compute_predictions_logits(
+    predictions = compute_predictions_logits_center(
         examples,
         features,
         all_results,
