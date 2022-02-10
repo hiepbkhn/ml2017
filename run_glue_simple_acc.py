@@ -63,7 +63,7 @@ logger = logging.getLogger(__name__)
 def simple_accuracy(preds, labels, probs):
     print('labels =', labels)
     print('preds =', preds)
-    print('%.4f' % accuracy_score(labels, preds)
+    print('%.4f' % accuracy_score(labels, preds))
     pickle.dump(probs, open('results.pickle', 'wb'))
     return (preds == labels).mean()
 
