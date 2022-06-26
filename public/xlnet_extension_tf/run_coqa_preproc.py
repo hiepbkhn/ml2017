@@ -1696,7 +1696,7 @@ def main(_):
         
         train_record_file = os.path.join(FLAGS.output_dir, "train-{0}.tfrecord".format(task_name))
         train_pickle_file = os.path.join(FLAGS.output_dir, "train-{0}.pkl".format(task_name))
-        if not os.path.exists(predict_record_file) or not os.path.exists(train_record_file) or FLAGS.overwrite_data:
+        if not os.path.exists(train_record_file) or not os.path.exists(train_pickle_file) or FLAGS.overwrite_data:
             train_features = example_processor.convert_examples_to_features(train_examples)
             np.random.shuffle(train_features)
             # example_processor.save_features_as_tfrecord(train_features, train_record_file)
