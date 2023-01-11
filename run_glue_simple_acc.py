@@ -64,7 +64,9 @@ def simple_accuracy(preds, labels, probs):
     print('labels =', labels)
     print('preds =', preds)
     print('%.4f' % accuracy_score(labels, preds))
-    pickle.dump(probs, open('results.pickle', 'wb'))
+    report = classification_report(labels, preds, output_dict=True)
+    print('%.3f %.3f %.3f' % (report['1']['precision'], report['1']['recall'], report['1']['f1-score']))
+    pickle.dump((labels, probs), open('results.pickle', 'wb'))
     return (preds == labels).mean()
 
 
